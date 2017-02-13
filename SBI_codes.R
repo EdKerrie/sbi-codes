@@ -1,0 +1,51 @@
+##INITIALIZE PACKAGES
+require(dplyr)
+require(magrittr)
+require(tidyr)
+require(lubridate)
+require(stringi)
+
+#PREPARE BASE SBI SET
+##Load dataset
+sbi <- read.csv("_data/20151201_sbi.csv", sep=";", header=FALSE, na.strings=c("","NA"))
+sbi %<>% rename(SBI_Code=V1) #rename
+sbi %<>% rename(SBI_Omschrijving=V2) #rename
+sbi$V3 <- NULL #remove column
+sbi %<>% na.omit #remove NA's
+sbi$SBI_Omschrijving %<>% as.character
+
+#Replace values
+sbi$SBI_Code <- gsub("[[:punct:]]", "", sbi$SBI_Code) #remove . from numbers
+sbi$SBI_Code <- gsub(" ", "", sbi$SBI_Code) #remove . from numbers
+
+##Create SBI Hoofdindeling based on NA values
+sbi$SBI_Code <- as.numeric(as.character(sbi$SBI_Code)) #set numeric and make NA's
+sbi_hoofd <- sbi[is.na(sbi$SBI_Code),] #save NA's in different df
+sbi_hoofd %<>% rename(SBI_Hoofd_Letter=SBI_Code,
+                      SBI_Hoofd_Omschrijving=SBI_Omschrijving)
+sbi_hoofd$SBI_Hoofd_Letter <- LETTERS[1:21] #add letters back to codes
+sbi_hoofd$SBI_Hoofd_Omschrijving <- gsub(";", ",", sbi_hoofd$SBI_Hoofd_Omschrijving)
+
+##Remove NA values
+sbi %<>% na.omit(sbi$SBI_Code) #remove NA's
+
+##Give proper number format
+sbi$SBI_Code_6 <- sbi$SBI_Code
+sbi$SBI_Code_6[1:63] %<>% 
+  stri_pad_right(5, 0) %>% #add trailing zero's
+  stri_pad_left(6, 0) #add leading zero's
+sbi$SBI_Code_6 %<>% stri_pad_right(6, 0) #add trailing zero's
+
+##Add Hoofdindeling
+sbi$SBI_Code_6 %<>% as.numeric
+sbi$SBI_Code %<>% as.character
+sbi$SBI_Hoofd_Letter <- cut(sbi$SBI_Code_6,
+                            breaks=c(1000, 32200, 99000, 332902, 353000, 390000, 439999, 479990, 
+                                     532020, 563000, 639900, 663000, 683200, 750000, 829990, 849100, 
+                                     857300, 889999, 932990, 960900, 982000, 990000, 995411), 
+                            labels=LETTERS[1:22])
+sbi %<>% left_join(sbi_hoofd, by="SBI_Hoofd_Letter")
+
+#WRITE TO CSV FILE
+csvFileName <- "_results/sbi_overview.csv"
+write.csv(sbi, file=csvFileName, row.names=FALSE)

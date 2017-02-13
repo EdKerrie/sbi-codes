@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "##INITIALIZE PACKAGES\nrequire(dplyr)\nrequire(magrittr)\nrequire(tidyr)\nrequire(lubridate)\nrequire(stringi)\n\n#PREPARE BASE SBI SET\n##Load dataset\nsbi <- read.csv(\"_data/20151201_sbi.csv\", sep=\";\", header=FALSE, na.strings=c(\"\",\"NA\"))\nsbi %<>% rename(SBI_Code=V1) #rename\nsbi %<>% rename(SBI_Omschrijving=V2) #rename\nsbi$V3 <- NULL #remove column\nsbi %<>% na.omit #remove NA's\nsbi$SBI_Omschrijving %<>% as.character\n\n#Replace values\nsbi$SBI_Code <- gsub(\"[[:punct:]]\", \"\", sbi$SBI_Code) #remove . from numbers\nsbi$SBI_Code <- gsub(\" \", \"\", sbi$SBI_Code) #remove . from numbers\n\n##Create SBI Hoofdindeling based on NA values\nsbi$SBI_Code <- as.numeric(as.character(sbi$SBI_Code)) #set numeric and make NA's\nsbi_hoofd <- sbi[is.na(sbi$SBI_Code),] #save NA's in different df\nsbi_hoofd %<>% rename(SBI_Hoofd_Letter=SBI_Code,\n                      SBI_Hoofd_Omschrijving=SBI_Omschrijving)\nsbi_hoofd$SBI_Hoofd_Letter <- LETTERS[1:21] #add letters back to codes\nsbi_hoofd$SBI_Hoofd_Omschrijving <- gsub(\";\", \",\", sbi_hoofd$SBI_Hoofd_Omschrijving)\n\n##Remove NA values\nsbi %<>% na.omit(sbi$SBI_Code) #remove NA's\n\n##Give proper number format\nsbi$SBI_Code_6 <- sbi$SBI_Code\nsbi$SBI_Code_6[1:63] %<>% \n  stri_pad_right(5, 0) %>% #add trailing zero's\n  stri_pad_left(6, 0) #add leading zero's\nsbi$SBI_Code_6 %<>% stri_pad_right(6, 0) #add trailing zero's\n\n##Add Hoofdindeling\nsbi$SBI_Code_6 %<>% as.numeric\nsbi$SBI_Code %<>% as.character\nsbi$SBI_Hoofd_Letter <- cut(sbi$SBI_Code_6,\n                            breaks=c(1000, 32200, 99000, 332902, 353000, 390000, 439999, 479990, \n                                     532020, 563000, 639900, 663000, 683200, 750000, 829990, 849100, \n                                     857300, 889999, 932990, 960900, 982000, 990000, 995411), \n                            labels=LETTERS[1:22])\nsbi %<>% left_join(sbi_hoofd, by=\"SBI_Hoofd_Letter\")\n\n#WRITE TO CSV FILE\ncsvFileName <- \"_results/sbi_overview.csv\"\nwrite.csv(sbi, file=csvFileName, row.names=FALSE)",
+    "created" : 1473326540854.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1365858082",
+    "id" : "82A85547",
+    "lastKnownWriteTime" : 1473338347,
+    "last_content_update" : 1473338347456,
+    "path" : "C:/Users/603300/OneDrive - Eneco Groep/Data Projects/SBI/SBI_codes.R",
+    "project_path" : "SBI_codes.R",
+    "properties" : {
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
